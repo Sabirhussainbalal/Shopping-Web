@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div
+      class="bg-gradient-to-tr from-fuchsia-300 to-sky-500 min-h-screen flex flex-col items-center p-6"
+    >
+      <section
+        id="login"
+        class="p-4 max-w-md w-full bg-white rounded-lg shadow-lg"
+      >
+        <h1 class="text-2xl font-bold text-center mb-4">Add Product</h1>
+        <form
+          action="/post"
+          method="POST"
+          enctype="multipart/form-data"
+          class="space-y-3"
+        >
+          <input
+            type="text"
+            name="title"
+            placeholder="Product Title"
+            required
+            class="w-full p-2 border rounded"
+          />
+          <textarea
+            name="desc"
+            placeholder="Product Description"
+            required
+            class="w-full p-2 border rounded"
+          ></textarea>
+          <input
+            type="number"
+            name="price"
+            placeholder="Price"
+            required
+            class="w-full p-2 border rounded"
+          />
+          <input
+            type="file"
+            name="userProfile"
+            required
+            class="w-full p-2 border rounded"
+          />
+          <button
+            type="submit"
+            class="w-full p-2 bg-blue-500 text-white rounded"
+          >
+            Add Product
+          </button>
+        </form>
+      </section>
+
+      <!-- Product List -->
+      <h2 class="text-xl font-bold mt-8">Products</h2>
+      <div
+        id="product-list"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4 w-full max-w-4xl"
+      ></div>
+    </div>
+
+    <script>
+      async function fetchProducts() {
+        try {
+          const response = await fetch("/products");
+          const products = await response.json();
+          let productContainer = document.getElementById("product-list");
+          productContainer.innerHTML = "";
+
+          products.forEach((product) => {
+            let imgSrc = `data:${
+              product.userProfile.contentType
+            };base64,${arrayBufferToBase64(product.userProfile.data.data)}`;
+            let productCard = `
+              <div class="bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold">${product.title}</h2>
+                <p class="text-gray-600">${product.desc}</p>
+                <p class="text-blue-500 font-bold">$${product.price}</p>
+                <img src="${imgSrc}" class="w-full h-40 object-cover mt-2 rounded-md"/>
+                <div class="flex justify-between mt-2">
+                  <button onclick="editProduct('${product._id}')" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">Edit</button>
+                  <button onclick="deleteProduct('${product._id}')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Delete</button>
+                </div>
+              </div>
+            `;
+            productContainer.innerHTML += productCard;
+          });
+        } catch (error) {
+          console.error("Error fetching products:", error);
+        }
+      }
+
+      async function deleteProduct(productId) {
+        if (confirm("Are you sure you want to delete this product?")) {
+          try {
+            const response = await fetch(`/delete/${productId}`, {
+              method: "DELETE",
+            });
+            const result = await response.json();
+            alert(result.message);
+            fetchProducts(); // Refresh the product list
+          } catch (error) {
+            console.error("Error deleting product:", error);
+          }
+        }
+      }
+
+      async function editProduct(productId) {
+        const newTitle = prompt("Enter new title:");
+        const newDesc = prompt("Enter new description:");
+        const newPrice = prompt("Enter new price:");
+
+        if (newTitle && newDesc && newPrice) {
+          try {
+            const response = await fetch(`/update/${productId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: newTitle,
+                desc: newDesc,
+                price: newPrice,
+              }),
+            });
+            const result = await response.json();
+            alert(result.message);
+            fetchProducts(); // Refresh the product list
+          } catch (error) {
+            console.error("Error updating product:", error);
+          }
+        }
+      }
+
+      function arrayBufferToBase64(buffer) {
+        let binary = "";
+        let bytes = new Uint8Array(buffer);
+        bytes.forEach((b) => (binary += String.fromCharCode(b)));
+        return btoa(binary);
+      }
+
+      window.onload = fetchProducts;
+    </script>
+  </body>
+</html>
